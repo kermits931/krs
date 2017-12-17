@@ -1,138 +1,158 @@
-LOCAL_PATH := $(call my-dir)
+LOCAL_PATH:= $(call my-dir)
 
-# Some handy paths
-EXT_PATH := jni/external
-SE_PATH := $(EXT_PATH)/selinux
-LIBSELINUX := $(SE_PATH)/libselinux/include
-LIBSEPOL := $(SE_PATH)/libsepol/include $(SE_PATH)/libsepol/cil/include
-LIBLZMA := $(EXT_PATH)/xz/src/liblzma/api
-LIBLZ4 := $(EXT_PATH)/lz4/lib
-LIBBZ2 := $(EXT_PATH)/bzip2
-LIBFDT := $(EXT_PATH)/dtc/libfdt
-UTIL_SRC := utils/cpio.c \
-            utils/file.c \
-            utils/img.c \
-            utils/list.c \
-            utils/misc.c \
-            utils/pattern.c \
-            utils/vector.c \
-            utils/xwrap.c
-
-########################
-# Binaries
-########################
-
-ifneq "$(or $(PRECOMPILE), $(GRADLE))" ""
-
-# magisk main binary
+# libsqlite.so (stub)
 include $(CLEAR_VARS)
-LOCAL_MODULE := magisk
-LOCAL_SHARED_LIBRARIES := libsqlite libselinux
+LOCAL_MODULE:= libsqlite
+LOCAL_C_INCLUDES := jni/external/include
+LOCAL_SRC_FILES := stubs/sqlite3_stub.c
+include $(BUILD_SHARED_LIBRARY)
 
-LOCAL_C_INCLUDES := \
-	jni/include \
-	jni/external/include \
-	$(LIBSELINUX)
+# libselinux.so (stub)
+include $(CLEAR_VARS)
+LOCAL_MODULE:= libselinux
+LOCAL_C_INCLUDES := $(LIBSELINUX)
+LOCAL_SRC_FILES := stubs/selinux_stub.c
+include $(BUILD_SHARED_LIBRARY)
 
+# libfdt.a
+include $(CLEAR_VARS)
+LOCAL_MODULE:= libfdt
+LOCAL_C_INCLUDES := $(LIBFDT)
 LOCAL_SRC_FILES := \
-	core/magisk.c \
-	core/daemon.c \
-	core/log_monitor.c \
-	core/bootstages.c \
-	core/socket.c \
-	magiskhide/magiskhide.c \
-	magiskhide/proc_monitor.c \
-	magiskhide/hide_utils.c \
-	resetprop/resetprop.cpp \
-	resetprop/system_properties.cpp \
-	su/su.c \
-	su/activity.c \
-	su/db.c \
-	su/pts.c \
-	su/su_daemon.c \
-	su/su_socket.c \
-	$(UTIL_SRC)
+	dtc/libfdt/fdt.c \
+	dtc/libfdt/fdt_addresses.c \
+	dtc/libfdt/fdt_empty_tree.c \
+	dtc/libfdt/fdt_overlay.c \
+	dtc/libfdt/fdt_ro.c \
+	dtc/libfdt/fdt_rw.c \
+	dtc/libfdt/fdt_strerror.c \
+	dtc/libfdt/fdt_sw.c \
+	dtc/libfdt/fdt_wip.c
+include $(BUILD_STATIC_LIBRARY)
 
-LOCAL_CFLAGS := -DIS_DAEMON -DSELINUX
-LOCAL_LDLIBS := -llog
-include $(BUILD_EXECUTABLE)
-
-endif
-
-ifndef PRECOMPILE
-
-# magiskinit
+# liblz4.a
 include $(CLEAR_VARS)
-LOCAL_MODULE := magiskinit
-LOCAL_STATIC_LIBRARIES := libsepol liblzma
-LOCAL_C_INCLUDES := \
-	jni/include \
-	jni/magiskpolicy \
-	../out/$(TARGET_ARCH_ABI) \
-	$(LIBSEPOL) \
-	$(LIBLZMA)
-
+LOCAL_MODULE := liblz4
+LOCAL_C_INCLUDES += $(LIBLZ4)
 LOCAL_SRC_FILES := \
-	core/magiskinit.c \
-	core/socket.c \
-	magiskpolicy/api.c \
-	magiskpolicy/magiskpolicy.c \
-	magiskpolicy/rules.c \
-	magiskpolicy/sepolicy.c \
-	$(UTIL_SRC)
+	lz4/lib/lz4.c \
+	lz4/lib/lz4frame.c \
+	lz4/lib/lz4hc.c \
+	lz4/lib/xxhash.c
+include $(BUILD_STATIC_LIBRARY)
 
-LOCAL_LDFLAGS := -static
-include $(BUILD_EXECUTABLE)
-
-# magiskboot
+# libbz2.a
 include $(CLEAR_VARS)
-LOCAL_MODULE := magiskboot
-LOCAL_STATIC_LIBRARIES := liblzma liblz4 libbz2 libfdt
-LOCAL_C_INCLUDES := \
-	jni/include \
-	jni/external/include \
-	$(LIBLZMA) \
-	$(LIBLZ4) \
-	$(LIBBZ2) \
-	$(LIBFDT)
-
+LOCAL_MODULE := libbz2
+LOCAL_C_INCLUDES += $(LIBBZ2)
 LOCAL_SRC_FILES := \
-	external/sha1/sha1.c \
-	magiskboot/main.c \
-	magiskboot/bootimg.c \
-	magiskboot/hexpatch.c \
-	magiskboot/compress.c \
-	magiskboot/types.c \
-	magiskboot/dtb.c \
-	magiskboot/ramdisk.c \
-	$(UTIL_SRC)
+	bzip2/blocksort.c  \
+	bzip2/huffman.c    \
+	bzip2/crctable.c   \
+	bzip2/randtable.c  \
+	bzip2/compress.c   \
+	bzip2/decompress.c \
+	bzip2/bzlib.c
+include $(BUILD_STATIC_LIBRARY)
 
-LOCAL_CFLAGS := -DXWRAP_EXIT
-LOCAL_LDLIBS := -lz
-include $(BUILD_EXECUTABLE)
-
-# 32-bit static binaries
-ifndef GRADLE  # Do not run gradle sync on these binaries
-ifneq ($(TARGET_ARCH_ABI), x86_64)
-ifneq ($(TARGET_ARCH_ABI), arm64-v8a)
-# b64xz
+# liblzma.a
 include $(CLEAR_VARS)
-LOCAL_MODULE := b64xz
-LOCAL_STATIC_LIBRARIES := liblzma
-LOCAL_C_INCLUDES := $(LIBLZMA)
-LOCAL_SRC_FILES := b64xz.c
-LOCAL_LDFLAGS := -static
-include $(BUILD_EXECUTABLE)
-# Busybox
-include jni/external/busybox/Android.mk
-endif
-endif
-endif
+LOCAL_MODULE := liblzma
+LOCAL_C_INCLUDES += \
+	$(EXT_PATH)/include/xz_config \
+	$(EXT_PATH)/xz/src/common \
+	$(EXT_PATH)/xz/src/liblzma/api \
+	$(EXT_PATH)/xz/src/liblzma/check \
+	$(EXT_PATH)/xz/src/liblzma/common \
+	$(EXT_PATH)/xz/src/liblzma/delta \
+	$(EXT_PATH)/xz/src/liblzma/lz \
+	$(EXT_PATH)/xz/src/liblzma/lzma \
+	$(EXT_PATH)/xz/src/liblzma/rangecoder \
+	$(EXT_PATH)/xz/src/liblzma/simple \
+	$(EXT_PATH)/xz/src/liblzma
+LOCAL_SRC_FILES := \
+	xz/src/common/tuklib_cpucores.c \
+	xz/src/common/tuklib_exit.c \
+	xz/src/common/tuklib_mbstr_fw.c \
+	xz/src/common/tuklib_mbstr_width.c \
+	xz/src/common/tuklib_open_stdxxx.c \
+	xz/src/common/tuklib_physmem.c \
+	xz/src/common/tuklib_progname.c \
+	xz/src/liblzma/check/check.c \
+	xz/src/liblzma/check/crc32_fast.c \
+	xz/src/liblzma/check/crc32_table.c \
+	xz/src/liblzma/check/crc64_fast.c \
+	xz/src/liblzma/check/crc64_table.c \
+	xz/src/liblzma/check/sha256.c \
+	xz/src/liblzma/common/alone_decoder.c \
+	xz/src/liblzma/common/alone_encoder.c \
+	xz/src/liblzma/common/auto_decoder.c \
+	xz/src/liblzma/common/block_buffer_decoder.c \
+	xz/src/liblzma/common/block_buffer_encoder.c \
+	xz/src/liblzma/common/block_decoder.c \
+	xz/src/liblzma/common/block_encoder.c \
+	xz/src/liblzma/common/block_header_decoder.c \
+	xz/src/liblzma/common/block_header_encoder.c \
+	xz/src/liblzma/common/block_util.c \
+	xz/src/liblzma/common/common.c \
+	xz/src/liblzma/common/easy_buffer_encoder.c \
+	xz/src/liblzma/common/easy_decoder_memusage.c \
+	xz/src/liblzma/common/easy_encoder.c \
+	xz/src/liblzma/common/easy_encoder_memusage.c \
+	xz/src/liblzma/common/easy_preset.c \
+	xz/src/liblzma/common/filter_buffer_decoder.c \
+	xz/src/liblzma/common/filter_buffer_encoder.c \
+	xz/src/liblzma/common/filter_common.c \
+	xz/src/liblzma/common/filter_decoder.c \
+	xz/src/liblzma/common/filter_encoder.c \
+	xz/src/liblzma/common/filter_flags_decoder.c \
+	xz/src/liblzma/common/filter_flags_encoder.c \
+	xz/src/liblzma/common/hardware_cputhreads.c \
+	xz/src/liblzma/common/hardware_physmem.c \
+	xz/src/liblzma/common/index.c \
+	xz/src/liblzma/common/index_decoder.c \
+	xz/src/liblzma/common/index_encoder.c \
+	xz/src/liblzma/common/index_hash.c \
+	xz/src/liblzma/common/outqueue.c \
+	xz/src/liblzma/common/stream_buffer_decoder.c \
+	xz/src/liblzma/common/stream_buffer_encoder.c \
+	xz/src/liblzma/common/stream_decoder.c \
+	xz/src/liblzma/common/stream_encoder.c \
+	xz/src/liblzma/common/stream_encoder_mt.c \
+	xz/src/liblzma/common/stream_flags_common.c \
+	xz/src/liblzma/common/stream_flags_decoder.c \
+	xz/src/liblzma/common/stream_flags_encoder.c \
+	xz/src/liblzma/common/vli_decoder.c \
+	xz/src/liblzma/common/vli_encoder.c \
+	xz/src/liblzma/common/vli_size.c \
+	xz/src/liblzma/delta/delta_common.c \
+	xz/src/liblzma/delta/delta_decoder.c \
+	xz/src/liblzma/delta/delta_encoder.c \
+	xz/src/liblzma/lz/lz_decoder.c \
+	xz/src/liblzma/lz/lz_encoder.c \
+	xz/src/liblzma/lz/lz_encoder_mf.c \
+	xz/src/liblzma/lzma/fastpos_table.c \
+	xz/src/liblzma/lzma/fastpos_tablegen.c \
+	xz/src/liblzma/lzma/lzma2_decoder.c \
+	xz/src/liblzma/lzma/lzma2_encoder.c \
+	xz/src/liblzma/lzma/lzma_decoder.c \
+	xz/src/liblzma/lzma/lzma_encoder.c \
+	xz/src/liblzma/lzma/lzma_encoder_optimum_fast.c \
+	xz/src/liblzma/lzma/lzma_encoder_optimum_normal.c \
+	xz/src/liblzma/lzma/lzma_encoder_presets.c \
+	xz/src/liblzma/rangecoder/price_table.c \
+	xz/src/liblzma/rangecoder/price_tablegen.c \
+	xz/src/liblzma/simple/arm.c \
+	xz/src/liblzma/simple/armthumb.c \
+	xz/src/liblzma/simple/ia64.c \
+	xz/src/liblzma/simple/powerpc.c \
+	xz/src/liblzma/simple/simple_coder.c \
+	xz/src/liblzma/simple/simple_decoder.c \
+	xz/src/liblzma/simple/simple_encoder.c \
+	xz/src/liblzma/simple/sparc.c \
+	xz/src/liblzma/simple/x86.c
+LOCAL_CFLAGS += -DHAVE_CONFIG_H -std=c99
+include $(BUILD_STATIC_LIBRARY)
 
-# Precompile
-endif
-
-########################
-# Externals
-########################
-include jni/external/Android.mk
+# libsepol.a
+include $(SE_PATH)/libsepol/Android.mk
