@@ -1,38 +1,27 @@
-apply plugin: 'java-library'
-
-apply plugin: 'com.github.johnrengelman.shadow'
-apply plugin: 'java'
-
-sourceCompatibility = "1.8"
-targetCompatibility = "1.8"
-
-jar {
-    manifest {
-        attributes 'Main-Class': 'com.topjohnwu.crypto.ZipSigner'
-    }
-}
-
-shadowJar {
-    baseName = 'zipsigner'
-    classifier = null
-    version = 1.1
-}
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
 
 buildscript {
+    
     repositories {
+        google()
         jcenter()
     }
     dependencies {
-        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.1'
+        classpath 'com.android.tools.build:gradle:3.0.1'
+        
+
+        // NOTE: Do not place your application dependencies here; they belong
+        // in the individual module build.gradle files
     }
 }
 
-repositories {
-    jcenter()
+allprojects {
+    repositories {
+        google()
+        jcenter()
+    }
 }
 
-dependencies {
-    implementation fileTree(include: ['*.jar'], dir: 'libs')
-    implementation 'org.bouncycastle:bcprov-jdk15on:1.58'
-    implementation 'org.bouncycastle:bcpkix-jdk15on:1.58'
+task clean(type: Delete) {
+    delete rootProject.buildDir
 }
